@@ -2,7 +2,6 @@
     Callable functions:
         get_config
         get_crossref
-        get_datacite
         sql_error
         connect_database
         send_email
@@ -55,7 +54,7 @@ def _call_config_responder(endpoint):
     raise ConnectionError(f"Could not get response from {url}: {req.text}")
 
 
-def _call_url(url, header=None):
+def _call_url(url, headers=None):
     ''' Get JSON from a URL (resumably a web API somewhere)
         Keyword arguments:
           url: URL
@@ -63,8 +62,8 @@ def _call_url(url, header=None):
           JSON response
     '''
     try:
-        if header:
-            req = requests.get(url, header=header, timeout=10)
+        if headers:
+            req = requests.get(url, headers=headers, timeout=10)
         else:
             req = requests.get(url, timeout=10)
     except requests.exceptions.RequestException as err:
@@ -76,6 +75,8 @@ def _call_url(url, header=None):
             raise requests.exceptions.JSONDecodeError("Could not decode response from " \
                                                       + f"{url} : {err}")
         return jstr
+    elif req.status_code == 404:
+        return {}
     else:
         raise Exception(f"Status: {str(req.status_code)} ({url})")
     raise ConnectionError(f"Could not get response from {url}: {req.text}")
@@ -300,6 +301,21 @@ def call_crossref(doi):
     """
     try:
         response = _call_url(f"https://api.crossref.org/works/{doi}",
-                             header={'mailto': 'svirskasr@hhmi.org'})
+                             headers={'mailto': 'svirskasr@hhmi.org'})
+        return response
+    except Exception as err:
+        raise err
+
+
+def call_datacite(doi):
+    """ Get DataCite data for a DOI
+        Keyword arguments:
+          doi: DOI
+        Returns:
+          JSON response
+    """
+    try:
+        response = _call_url(f"https://api.datacite.org/dois/{doi}")
+        return response
     except Exception as err:
         raise err
