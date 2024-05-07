@@ -1,6 +1,8 @@
 ''' Library of common routines. Very much a work in progress.
     Callable functions:
         get_config
+        get_crossref
+        get_datacite
         sql_error
         connect_database
         send_email
@@ -50,6 +52,32 @@ def _call_config_responder(endpoint):
             raise requests.exceptions.JSONDecodeError("Could not decode response from " \
                                                       + f"{url} : {err}")
         return jstr
+    raise ConnectionError(f"Could not get response from {url}: {req.text}")
+
+
+def _call_url(url, header=None):
+    ''' Get JSON from a URL (resumably a web API somewhere)
+        Keyword arguments:
+          url: URL
+        Returns:
+          JSON response
+    '''
+    try:
+        if header:
+            req = requests.get(url, header=header, timeout=10)
+        else:
+            req = requests.get(url, timeout=10)
+    except requests.exceptions.RequestException as err:
+        raise err
+    if req.status_code == 200:
+        try:
+            jstr = req.json()
+        except Exception as err:
+            raise requests.exceptions.JSONDecodeError("Could not decode response from " \
+                                                      + f"{url} : {err}")
+        return jstr
+    else:
+        raise Exception(f"Status: {str(req.status_code)} ({url})")
     raise ConnectionError(f"Could not get response from {url}: {req.text}")
 
 
@@ -258,3 +286,20 @@ def setup_logging(arg):
     handler.setFormatter(colorlog.ColoredFormatter())
     logger.addHandler(handler)
     return logger
+
+
+# ****************************************************************************
+# * Web                                                                      *
+# ****************************************************************************
+def call_crossref(doi):
+    """ Get Crossref data for a DOI
+        Keyword arguments:
+          doi: DOI
+        Returns:
+          JSON response
+    """
+    try:
+        response = _call_url(f"https://api.crossref.org/works/{doi}",
+                             header={'mailto': 'svirskasr@hhmi.org'})
+    except Exception as err:
+        raise err
