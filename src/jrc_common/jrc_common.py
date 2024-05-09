@@ -2,6 +2,7 @@
     Callable functions:
         get_config
         get_crossref
+        simplenamespace_to_dict
         sql_error
         connect_database
         send_email
@@ -54,7 +55,7 @@ def _call_config_responder(endpoint):
     raise ConnectionError(f"Could not get response from {url}: {req.text}")
 
 
-def _call_url(url, headers=None):
+def _call_url(url, headers=None, timeout=10):
     ''' Get JSON from a URL (resumably a web API somewhere)
         Keyword arguments:
           url: URL
@@ -63,9 +64,9 @@ def _call_url(url, headers=None):
     '''
     try:
         if headers:
-            req = requests.get(url, headers=headers, timeout=10)
+            req = requests.get(url, headers=headers, timeout=timeout)
         else:
-            req = requests.get(url, timeout=10)
+            req = requests.get(url, timeout=timeout)
     except requests.exceptions.RequestException as err:
         raise err
     if req.status_code == 200:
@@ -75,11 +76,9 @@ def _call_url(url, headers=None):
             raise requests.exceptions.JSONDecodeError("Could not decode response from " \
                                                       + f"{url} : {err}")
         return jstr
-    elif req.status_code == 404:
+    if req.status_code == 404:
         return {}
-    else:
-        raise Exception(f"Status: {str(req.status_code)} ({url})")
-    raise ConnectionError(f"Could not get response from {url}: {req.text}")
+    raise Exception(f"Status: {str(req.status_code)} ({url})")
 
 
 def _connect_mongo(dbo):
@@ -178,6 +177,22 @@ def get_config(config):
     return json.loads(json.dumps(data), object_hook=lambda dat: SimpleNamespace(**dat))
 
 
+def simplenamespace_to_dict(nspace):
+    """ Convert a simplenamespace to a dict recursively
+        Keyword arguments:
+          nspace: simplenamespace to convert
+        Returns:
+          The converted dict
+    """
+    result = {}
+    for key, value in nspace.__dict__.items():
+        if isinstance(value, SimpleNamespace):
+            result[key] = simplenamespace_to_dict(value)
+        else:
+            result[key] = value
+    return result
+
+
 # ****************************************************************************
 # * Database                                                                 *
 # ****************************************************************************
@@ -201,12 +216,11 @@ def connect_database(dbo):
     """
     if dbo.type == "mongo":
         return _connect_mongo(dbo)
-    elif dbo.type == "mysql":
+    if dbo.type == "mysql":
         return _connect_mysql(dbo)
-    elif dbo.type == "pg":
+    if dbo.type == "pg":
         return _connect_postgres(dbo)
-    else:
-        return None
+    return None
 
 
 # ****************************************************************************
@@ -292,7 +306,7 @@ def setup_logging(arg):
 # ****************************************************************************
 # * Web                                                                      *
 # ****************************************************************************
-def call_crossref(doi):
+def call_crossref(doi, timeout=10):
     """ Get Crossref data for a DOI
         Keyword arguments:
           doi: DOI
@@ -301,13 +315,14 @@ def call_crossref(doi):
     """
     try:
         response = _call_url(f"https://api.crossref.org/works/{doi}",
-                             headers={'mailto': 'svirskasr@hhmi.org'})
+                             headers={'mailto': 'svirskasr@hhmi.org'},
+                             timeout=timeout)
         return response
     except Exception as err:
         raise err
 
 
-def call_datacite(doi):
+def call_datacite(doi, timeout=10):
     """ Get DataCite data for a DOI
         Keyword arguments:
           doi: DOI
@@ -315,7 +330,7 @@ def call_datacite(doi):
           JSON response
     """
     try:
-        response = _call_url(f"https://api.datacite.org/dois/{doi}")
+        response = _call_url(f"https://api.datacite.org/dois/{doi}", timeout=timeout)
         return response
     except Exception as err:
         raise err
