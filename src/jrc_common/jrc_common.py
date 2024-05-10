@@ -93,11 +93,18 @@ def _connect_mongo(dbo):
                 + ({dbo.port} if hasattr(dbo, "port") and dbo.port else "27017")
     try:
         if hasattr(dbo, "password") and dbo.password:
-            client = MongoClient(full_host, username=dbo.user,
-                                 password=dbo.password, replicaSet=dbo.replicaset)
+            if hasattr(dbo, "replicaset") and dbo.replicaset:
+                client = MongoClient(full_host, username=dbo.user,
+                                     password=dbo.password, replicaSet=dbo.replicaset)
+            else:
+                client = MongoClient(full_host, username=dbo.user,
+                                     password=dbo.password)
             connector = client[dbo.client]
         else:
-            client = MongoClient(full_host, replicaSet=dbo.replicaset)
+            if hasattr(dbo, "replicaset") and dbo.replicaset:
+                client = MongoClient(full_host, replicaSet=dbo.replicaset)
+            else:
+                client = MongoClient(full_host)
             connector = client[dbo.client]
     except Exception as err:
         raise err
