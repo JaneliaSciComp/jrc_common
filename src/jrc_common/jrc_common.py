@@ -233,7 +233,7 @@ def connect_database(dbo):
 # ****************************************************************************
 # * Email                                                                    *
 # ****************************************************************************
-def send_email(mail_text, sender, receivers, subject, attachment=None):
+def send_email(mail_text, sender, receivers, subject, attachment=None, mime='plain'):
     """ Send an email
         Keyword arguments:
           mail_text: body of email message
@@ -253,7 +253,7 @@ def send_email(mail_text, sender, receivers, subject, attachment=None):
     message["From"] = sender
     message["To"] = ", ".join(receivers)
     message["Subject"] =subject
-    message.attach(MIMEText(mail_text, 'plain'))
+    message.attach(MIMEText(mail_text, mime))
     if attachment:
         attach_file_name = attachment
         with open(attach_file_name, 'rb') as attach_file: # open the file as binary mode
