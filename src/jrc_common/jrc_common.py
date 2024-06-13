@@ -1,7 +1,10 @@
 ''' Library of common routines. Very much a work in progress.
     Callable functions:
+        call_crossref
+        call_datacite
+        call_people_by_id
+        call_people_by_name
         get_config
-        get_crossref
         simplenamespace_to_dict
         sql_error
         connect_database
@@ -9,6 +12,9 @@
         check_token
         setup_logging
 '''
+
+# pylint: disable=broad-exception-raised
+
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
@@ -29,6 +35,13 @@ import requests
 
 
 # ****************************************************************************
+# * Constants                                                                *
+# ****************************************************************************
+CROSSREF_BASE = 'https://api.crossref.org/works/'
+DATACITE_BASE = 'https://api.datacite.org/dois/'
+PEOPLE_BASE = 'https://hhmipeople-prod.azurewebsites.net/People/'
+
+# ****************************************************************************
 # * Internal routines                                                        *
 # ****************************************************************************
 def _call_config_responder(endpoint):
@@ -36,7 +49,7 @@ def _call_config_responder(endpoint):
         Keyword arguments:
           endpoint: REST endpoint
         Returns:
-          JSON response
+          Response JSON or raised exception
     '''
     if not os.environ.get('CONFIG_SERVER_URL'):
         raise ValueError("Missing environment variable CONFIG_SERVER_URL")
@@ -311,17 +324,18 @@ def setup_logging(arg):
 
 
 # ****************************************************************************
-# * Web                                                                      *
+# * REST                                                                     *
 # ****************************************************************************
 def call_crossref(doi, timeout=10):
     """ Get Crossref data for a DOI
         Keyword arguments:
           doi: DOI
+          timeout: GET timeout
         Returns:
-          JSON response
+          Response JSON or raised exception
     """
     try:
-        response = _call_url(f"https://api.crossref.org/works/{doi}",
+        response = _call_url(f"{CROSSREF_BASE}{doi}",
                              headers={'mailto': 'svirskasr@hhmi.org'},
                              timeout=timeout)
         return response
@@ -333,11 +347,48 @@ def call_datacite(doi, timeout=10):
     """ Get DataCite data for a DOI
         Keyword arguments:
           doi: DOI
+          timeout: GET timeout
         Returns:
-          JSON response
+          Response JSON or raised exception
     """
     try:
-        response = _call_url(f"https://api.datacite.org/dois/{doi}", timeout=timeout)
+        response = _call_url(f"{DATACITE_BASE}{doi}", timeout=timeout)
         return response
     except Exception as err:
         raise err
+
+
+def call_people_by_id(eid, timeout=10):
+    """ Get person data from the People system by employee ID
+        Keyword arguments:
+          eid: employee ID
+          timeout: GET timeout
+        Returns:
+          Response JSON or raised exception
+    """
+    url = f"{PEOPLE_BASE}Person/GetById/{eid}"
+    headers = {'APIKey': os.environ['PEOPLE_API_KEY'],
+               'Content-Type': 'application/json'}
+    try:
+        response = _call_url(url, headers=headers, timeout=timeout)
+    except Exception as err:
+        raise err
+    return response
+
+
+def call_people_by_name(name, timeout=10):
+    """ Get person data from the People system by name
+        Keyword arguments:
+          name: name
+          timeout: GET timeout
+        Returns:
+          Response JSON or raised exception
+    """
+    url = f"{PEOPLE_BASE}Search/ByName/{name}"
+    headers = {'APIKey': os.environ['PEOPLE_API_KEY'],
+               'Content-Type': 'application/json'}
+    try:
+        response = _call_url(url, headers=headers, timeout=timeout)
+    except Exception as err:
+        raise err
+    return response
