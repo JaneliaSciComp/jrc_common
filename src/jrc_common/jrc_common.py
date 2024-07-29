@@ -5,6 +5,7 @@
         call_people_by_id
         call_people_by_name
         get_config
+        get_run_data
         simplenamespace_to_dict
         sql_error
         connect_database
@@ -15,10 +16,12 @@
 
 # pylint: disable=broad-exception-raised
 
+from datetime import datetime
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+import getpass
 import json
 from operator import attrgetter
 import os
@@ -195,6 +198,32 @@ def get_config(config):
     except Exception as err:
         raise err
     return json.loads(json.dumps(data), object_hook=lambda dat: SimpleNamespace(**dat))
+
+
+def get_run_data(program, version):
+    """ Get a run data message with program name/version, user, and date/time
+        Keyword arguments:
+          program: program name
+          version: program version
+        Returns:
+          Run data message
+    """
+    msg = f"{os.path.basename(program)} (version {version})"
+    user = getpass.getuser()
+    if user:
+        try:
+            workday = simplenamespace_to_dict(get_config("workday"))
+        except Exception as err:
+            raise(err)
+        if user in workday:
+            rec = workday[user]
+            msg += f" run by {rec['first']} {rec['last']} at {datetime.now()}\n"
+        else:
+            msg += f" run by {user} at {datetime.now()}\n"
+    else:
+        msg += f" run at {datetime.now()}\n"
+    return msg
+
 
 
 def simplenamespace_to_dict(nspace):
