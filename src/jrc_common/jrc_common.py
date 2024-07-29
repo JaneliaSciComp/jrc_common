@@ -200,6 +200,26 @@ def get_config(config):
     return json.loads(json.dumps(data), object_hook=lambda dat: SimpleNamespace(**dat))
 
 
+def get_user_name():
+    """ Return the name of the user running the program
+        Keyword arguments:
+          None
+        Returns:
+          User name
+    """
+    user = getpass.getuser()
+    if user:
+        try:
+            workday = simplenamespace_to_dict(get_config("workday"))
+        except Exception as err:
+            raise err
+        if user in workday:
+            rec = workday[user]
+            return f"{rec['first']} {rec['last']}"
+        return user
+    return None
+
+
 def get_run_data(program, version):
     """ Get a run data message with program name/version, user, and date/time
         Keyword arguments:
@@ -209,21 +229,15 @@ def get_run_data(program, version):
           Run data message
     """
     msg = f"{os.path.basename(program)} (version {version})"
-    user = getpass.getuser()
-    if user:
-        try:
-            workday = simplenamespace_to_dict(get_config("workday"))
-        except Exception as err:
-            raise(err)
-        if user in workday:
-            rec = workday[user]
-            msg += f" run by {rec['first']} {rec['last']} at {datetime.now()}\n"
-        else:
-            msg += f" run by {user} at {datetime.now()}\n"
+    try:
+        uname = get_user_name()
+    except Exception as err:
+        raise err
+    if uname:
+        msg += f" run by {uname} at {datetime.now()}\n"
     else:
         msg += f" run at {datetime.now()}\n"
     return msg
-
 
 
 def simplenamespace_to_dict(nspace):
