@@ -1,5 +1,6 @@
 ''' Library of common routines. Very much a work in progress.
     Callable functions:
+        call_biorxiv
         call_crossref
         call_datacite
         call_people_by_id
@@ -40,6 +41,7 @@ import requests
 # ****************************************************************************
 # * Constants                                                                *
 # ****************************************************************************
+BIORXIV_BASE = "https://api.biorxiv.org/details/biorxiv/"
 CROSSREF_BASE = 'https://api.crossref.org/works/'
 DATACITE_BASE = 'https://api.datacite.org/dois/'
 PEOPLE_BASE = 'https://hhmipeople-prod.azurewebsites.net/People/'
@@ -369,6 +371,24 @@ def setup_logging(arg):
 # ****************************************************************************
 # * REST                                                                     *
 # ****************************************************************************
+
+def call_biorxiv(doi, timeout=10):
+    """ Get bioRxiv data for a DOI
+        Keyword arguments:
+          doi: DOI
+          timeout: GET timeout
+        Returns:
+          Response JSON or raised exception
+    """
+    try:
+        response = _call_url(f"{BIORXIV_BASE}{doi}",
+                             headers={"Accept": "application/json"},
+                             timeout=timeout)
+        return response
+    except Exception as err:
+        raise err
+
+
 def call_crossref(doi, timeout=10):
     """ Get Crossref data for a DOI
         Keyword arguments:
