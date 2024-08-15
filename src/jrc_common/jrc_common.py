@@ -1,5 +1,6 @@
 ''' Library of common routines. Very much a work in progress.
     Callable functions:
+        call_arxiv
         call_biorxiv
         call_crossref
         call_datacite
@@ -36,11 +37,13 @@ import psycopg2
 import psycopg2.extras
 from pymongo import MongoClient
 import requests
+import xmltodict
 
 
 # ****************************************************************************
 # * Constants                                                                *
 # ****************************************************************************
+ARXIV_BASE = "https://export.arxiv.org/api/query?search_query="
 BIORXIV_BASE = "https://api.biorxiv.org/details/biorxiv/"
 CROSSREF_BASE = 'https://api.crossref.org/works/'
 DATACITE_BASE = 'https://api.datacite.org/dois/'
@@ -73,7 +76,7 @@ def _call_config_responder(endpoint):
     raise ConnectionError(f"Could not get response from {url}: {req.text}")
 
 
-def _call_url(url, headers=None, timeout=10):
+def _call_url_old(url, headers=None, timeout=10):
     ''' Get JSON from a URL (resumably a web API somewhere)
         Keyword arguments:
           url: URL
@@ -93,6 +96,41 @@ def _call_url(url, headers=None, timeout=10):
         except Exception as err:
             raise requests.exceptions.JSONDecodeError("Could not decode response from " \
                                                       + f"{url} : {err}")
+        return jstr
+    if req.status_code == 404:
+        return {}
+    raise Exception(f"Status: {str(req.status_code)} ({url})")
+
+
+def _call_url(url, headers=None, timeout=10, fmt='json'):
+    ''' Get JSON from a URL (resumably a web API somewhere)
+        Keyword arguments:
+          url: URL
+        Returns:
+          JSON response
+    '''
+    try:
+        if headers:
+            req = requests.get(url, headers=headers, timeout=timeout)
+        else:
+            req = requests.get(url, timeout=timeout)
+    except requests.exceptions.RequestException as err:
+        raise err
+    if req.status_code == 200:
+        if fmt == 'json':
+            try:
+                jstr = req.json()
+            except Exception as err:
+                raise requests.exceptions.JSONDecodeError("Could not decode response from " \
+                                                          + f"{url} : {err}")
+        elif fmt == 'xml':
+            try:
+                jstr = xmltodict.parse(req.text)
+            except Exception as err:
+                raise Exception("Could not decode XML response from " \
+                                + f"{url} : {err}") from err
+        else:
+            raise Exception(f"Unknown format: {fmt}")
         return jstr
     if req.status_code == 404:
         return {}
@@ -371,6 +409,22 @@ def setup_logging(arg):
 # ****************************************************************************
 # * REST                                                                     *
 # ****************************************************************************
+
+def call_arxiv(query, timeout=10):
+    """ Get aRxiv data for a query
+        Keyword arguments:
+          query: query
+          timeout: GET timeout
+        Returns:
+          Response XML or raised exception
+    """
+    try:
+        response = _call_url(f"{ARXIV_BASE}{query}",
+                             timeout=timeout, fmt='xml')
+        return response
+    except Exception as err:
+        raise err
+
 
 def call_biorxiv(doi, timeout=10):
     """ Get bioRxiv data for a DOI

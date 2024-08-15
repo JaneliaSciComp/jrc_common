@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 [project]
 name = "jrc_common"
-version = "1.5.0"
+version = "1.6.0"
 authors = [
   { name="Rob Svirskas", email="svirskasr@hhmi.org" },
 ]
@@ -15,7 +15,8 @@ dependencies = ["colorlog",
                 "psycopg2-binary",
                 "PyJWT==2.6.0",
                 "pymongo==4.4.0",
-                "requests"
+                "requests",
+                "xmltodict"
 ]
 classifiers = [
     "Programming Language :: Python :: 3",
