@@ -4,6 +4,7 @@
         call_biorxiv
         call_crossref
         call_datacite
+        call_oa
         call_people_by_id
         call_people_by_name
         get_config
@@ -47,6 +48,42 @@ ARXIV_BASE = "https://export.arxiv.org/api/query?search_query="
 BIORXIV_BASE = "https://api.biorxiv.org/details/biorxiv/"
 CROSSREF_BASE = 'https://api.crossref.org/works/'
 DATACITE_BASE = 'https://api.datacite.org/dois/'
+OA_BASE = 'https://bg.api.oa.works/report/works'
+OA_SUFFIX = '?q=(openalx.authorships.institutions.display_name:' \
+            + 'janelia%20OR%20openalx.authorships.affiliations.raw_affiliation_string:' \
+            + 'janelia%20OR%20openalx.authorships.institutions.ror:' \
+            + '013sk6x84%20OR%20openalx.authorships.institutions.id:' \
+            + '%22i195573530%22)%20AND%20((supplements.sheets:' \
+            + '(%22pmc__hhmi%22%20OR%20%22name_epmc__hhmi%22%20OR%20%22' \
+            + 'all-time__hhmi%22%20OR%20%22authorship__hhmi%22%20OR%20%22' \
+            + 'staff__hhmi%22%20OR%20%22preprints_oa_locations__hhmi' \
+            + '%22%20OR%20%22preprints-enrichment__hhmi%22)%20OR%20' \
+            + '(funder.DOI:(%2210.13039/100000011%22)%20OR%20funder.name:' \
+            + '(%22Howard%20Hughes%20Medical%20Institute%22%20OR' \
+            + '%20%22Janelia%20Research%20Campus%22%20OR' \
+            + '%20%22Freeman%20Hrabowski%22)%20OR%20openalx.grants.funder:' \
+            + '(%22F4320306082%22))%20OR%20(authorships.institutions.ror:' \
+            + '(%22006w34k90%22%20OR%20%22013sk6x84%22)%20OR' \
+            + '%20authorships.institutions.display_name:' \
+            + '(%22Howard%20Hughes%20Medical%20Institute%22%20OR%20%22' \
+            + 'Janelia%20Research%20Campus%22%20OR' \
+            + '%20%22Freeman%20Hrabowski%22)%20OR' \
+            + '%20authorships.raw_affiliation_string:' \
+            + '(%22Howard%20Hughes%20Medical%20Institute%22%20OR' \
+            + '%20%22Janelia%20Research%20Campus%22%20OR' \
+            + '%20%22Freeman%20Hrabowski%22))%20OR%20' \
+            + 'supplements.funder.display_name_ic:%22hhmi%22)%20AND' \
+            + '%20NOT%20(supplements.removed_from_report:' \
+            + '%22hhmi%22%20OR%20supplements.is_financial_disclosure:' \
+            + '%22hhmi%22))%20AND%20type:' \
+            + '(%22article%22%20OR%20%22editorial%22%20OR' \
+            + '%20%22letter%22%20OR%20%22review%22)%20AND%20NOT' \
+            + '%20openalx.type_crossref:' \
+            + '%22proceedings-article%22%20AND%20NOT' \
+            + '%20(supplements.is_preprint:true%20OR' \
+            + '%20(pubtype:preprint%20AND%20NOT%20supplements.is_preprint:' \
+            + 'false)%20OR%20subtype:preprint)%20AND%20openalex:*%20AND' \
+            + '%20journal:*'
 PEOPLE_BASE = 'https://hhmipeople-prod.azurewebsites.net/People/'
 
 # ****************************************************************************
@@ -470,6 +507,25 @@ def call_datacite(doi, timeout=10):
     """
     try:
         response = _call_url(f"{DATACITE_BASE}{doi}", timeout=timeout)
+        return response
+    except Exception as err:
+        raise err
+
+
+def call_oa(doi='', suffix='', timeout=10):
+    """ Get OA data for a single DOI or for all Janelia OA works
+        Keyword arguments:
+          doi: DOI
+          suffix: URL suffix
+          timeout: GET timeout
+        Returns:
+          Response JSON or raised exception
+    """
+    url = f"{OA_BASE}/{doi}" if doi else f"{OA_BASE}{OA_SUFFIX}{suffix}"
+    try:
+        response = _call_url(url,
+                             headers={"Accept": "application/json"},
+                             timeout=timeout)
         return response
     except Exception as err:
         raise err
