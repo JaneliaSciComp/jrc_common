@@ -34,8 +34,11 @@ from types import SimpleNamespace
 import colorlog
 import jwt
 import MySQLdb
-import psycopg2
-import psycopg2.extras
+try:
+    import psycopg2
+    import psycopg2.extras
+except:
+    print("Did not import PostgreSQL libraries")
 from pymongo import MongoClient
 import requests
 import xmltodict
