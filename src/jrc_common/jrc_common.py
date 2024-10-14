@@ -37,9 +37,6 @@ import requests
 import xmltodict
 try:
     import MySQLdb
-    import psycopg2
-    import psycopg2.extras
-    from pymongo import MongoClient
 except:
     pass
 
@@ -185,6 +182,7 @@ def _connect_mongo(dbo):
         Returns:
           connector
     """
+    from pymongo import MongoClient
     full_host = f"{dbo.host}:" \
                 + ({dbo.port} if hasattr(dbo, "port") and dbo.port else "27017")
     try:
@@ -235,6 +233,8 @@ def _connect_postgres(dbo):
         Returns:
           cursor
     """
+    import psycopg2
+    import psycopg2.extras
     try:
         conn = psycopg2.connect(host=dbo.host, database=dbo.name,user=dbo.user)
         cursor = conn.cursor()
