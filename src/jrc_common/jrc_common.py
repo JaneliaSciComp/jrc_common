@@ -33,15 +33,15 @@ import time
 from types import SimpleNamespace
 import colorlog
 import jwt
-import MySQLdb
-try:
-    import psycopg2
-    import psycopg2.extras
-except:
-    print("Did not import PostgreSQL libraries")
-from pymongo import MongoClient
 import requests
 import xmltodict
+try:
+    import MySQLdb
+    import psycopg2
+    import psycopg2.extras
+    from pymongo import MongoClient
+except:
+    pass
 
 
 # ****************************************************************************
