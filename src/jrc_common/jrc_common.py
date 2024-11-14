@@ -549,6 +549,8 @@ def call_people_by_id(eid, timeout=10):
         response = _call_url(url, headers=headers, timeout=timeout)
     except Exception as err:
         raise err
+    if response and (('nameFirst' not in response) or (not response['nameFirst'])):
+        return None
     return response
 
 
