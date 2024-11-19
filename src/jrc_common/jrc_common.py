@@ -5,6 +5,7 @@
         call_crossref
         call_datacite
         call_oa
+        call_orcid
         call_people_by_id
         call_people_by_name
         get_config
@@ -49,6 +50,7 @@ BIORXIV_BASE = "https://api.biorxiv.org/details/biorxiv/"
 CROSSREF_BASE = 'https://api.crossref.org/works/'
 DATACITE_BASE = 'https://api.datacite.org/dois/'
 OA_BASE = 'https://bg.api.oa.works/report/works'
+ORCID_BASE = 'https://pub.orcid.org/v3.0/'
 OA_SUFFIX = '?q=(openalx.authorships.institutions.display_name:' \
             + 'janelia%20OR%20openalx.authorships.affiliations.raw_affiliation_string:' \
             + 'janelia%20OR%20openalx.authorships.institutions.ror:' \
@@ -525,6 +527,24 @@ def call_oa(doi='', suffix='', timeout=10):
           Response JSON or raised exception
     """
     url = f"{OA_BASE}/{doi}" if doi else f"{OA_BASE}{OA_SUFFIX}{suffix}"
+    try:
+        response = _call_url(url,
+                             headers={"Accept": "application/json"},
+                             timeout=timeout)
+        return response
+    except Exception as err:
+        raise err
+
+
+def call_orcid(oid, timeout=10):
+    """ Get data from ORCID for a given ID
+        Keyword arguments:
+          oid: ORCID Id
+          timeout: GET timeout
+        Returns:
+          Response JSON or raised exception
+    """
+    url = f"{ORCID_BASE}{oid}"
     try:
         response = _call_url(url,
                              headers={"Accept": "application/json"},
