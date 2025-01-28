@@ -9,6 +9,7 @@
         call_people_by_id
         call_people_by_name
         get_config
+        get_pmid
         get_run_data
         simplenamespace_to_dict
         sql_error
@@ -49,6 +50,8 @@ ARXIV_BASE = "https://export.arxiv.org/api/query?search_query="
 BIORXIV_BASE = "https://api.biorxiv.org/details/biorxiv/"
 CROSSREF_BASE = 'https://api.crossref.org/works/'
 DATACITE_BASE = 'https://api.datacite.org/dois/'
+NCBI_BASE = 'https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/' \
+            + '?tool=update_dois&email=svirskasr@hhmi.org&ids='
 OA_BASE = 'https://bg.api.oa.works/report/works'
 ORCID_BASE = 'https://pub.orcid.org/v3.0/'
 OA_SUFFIX = '?q=(openalx.authorships.institutions.display_name:' \
@@ -587,6 +590,22 @@ def call_people_by_name(name, timeout=10):
                'Content-Type': 'application/json'}
     try:
         response = _call_url(url, headers=headers, timeout=timeout)
+    except Exception as err:
+        raise err
+    return response
+
+
+def get_pmid(doi, timeout=10):
+    """ Convert a DOI to a PMID
+        Keyword arguments:
+          doi: DOI
+          timeout: GET timeout
+        Returns:
+          Response JSON or raised exception
+    """
+    url = f"{NCBI_BASE}{doi}"
+    try:
+        response = _call_url(url, timeout=timeout)
     except Exception as err:
         raise err
     return response
