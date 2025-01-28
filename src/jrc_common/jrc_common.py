@@ -51,7 +51,7 @@ BIORXIV_BASE = "https://api.biorxiv.org/details/biorxiv/"
 CROSSREF_BASE = 'https://api.crossref.org/works/'
 DATACITE_BASE = 'https://api.datacite.org/dois/'
 NCBI_BASE = 'https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/' \
-            + '?tool=update_dois&email=svirskasr@hhmi.org&ids='
+            + '?tool=update_dois&email=svirskasr@hhmi.org&format=json&ids='
 OA_BASE = 'https://bg.api.oa.works/report/works'
 ORCID_BASE = 'https://pub.orcid.org/v3.0/'
 OA_SUFFIX = '?q=(openalx.authorships.institutions.display_name:' \
