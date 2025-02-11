@@ -8,6 +8,7 @@
         call_orcid
         call_people_by_id
         call_people_by_name
+        call_people_by_suporg
         get_config
         get_pmid
         get_run_data
@@ -586,6 +587,25 @@ def call_people_by_name(name, timeout=10):
           Response JSON or raised exception
     """
     url = f"{PEOPLE_BASE}Search/ByName/{name}"
+    headers = {'APIKey': os.environ['PEOPLE_API_KEY'],
+               'Content-Type': 'application/json'}
+    try:
+        response = _call_url(url, headers=headers, timeout=timeout)
+    except Exception as err:
+        raise err
+    return response
+
+
+def call_people_by_suporg(code, page=0, timeout=10):
+    """ Get suporg data from the People system by suporg code
+        Keyword arguments:
+          code: suporg code
+          page: data page (starts at 0)
+          timeout: GET timeout
+        Returns:
+          Response JSON or raised exception
+    """
+    url = f"{PEOPLE_BASE}GetByOrg/{code}/{page}"
     headers = {'APIKey': os.environ['PEOPLE_API_KEY'],
                'Content-Type': 'application/json'}
     try:
