@@ -375,7 +375,7 @@ def connect_database(dbo):
 # ****************************************************************************
 # * Email                                                                    *
 # ****************************************************************************
-def send_email(mail_text, sender, receivers, subject, attachment=None, mime='plain'):
+def send_email(mail_text, sender, receivers, subject, attachment=None, mime='plain', server=None):
     """ Send an email
         Keyword arguments:
           mail_text: body of email message
@@ -386,11 +386,14 @@ def send_email(mail_text, sender, receivers, subject, attachment=None, mime='pla
         Returns:
           None
     """
-    try:
-        servers = get_config("servers")
-    except Exception as err:
-        raise err
-    mail_server = attrgetter("mail.address")(servers)
+    if server:
+        mail_server = server
+    else:
+        try:
+            servers = get_config("servers")
+            mail_server = attrgetter("mail.address")(servers)
+        except Exception as err:
+            raise err
     message = MIMEMultipart()
     message["From"] = sender
     message["To"] = ", ".join(receivers)
