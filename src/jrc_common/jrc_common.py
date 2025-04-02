@@ -4,6 +4,7 @@
         call_biorxiv
         call_crossref
         call_datacite
+        call_protocolsio
         call_oa
         call_orcid
         call_people_by_id
@@ -91,6 +92,7 @@ OA_SUFFIX = '?q=(openalx.authorships.institutions.display_name:' \
             + 'false)%20OR%20subtype:preprint)%20AND%20openalex:*%20AND' \
             + '%20journal:*'
 PEOPLE_BASE = 'https://hhmipeople-prod.azurewebsites.net/People/'
+PROTOCOLSIO_BASE = 'https://www.protocols.io/api/v3/'
 
 # ****************************************************************************
 # * Internal routines                                                        *
@@ -616,6 +618,23 @@ def call_people_by_suporg(code, page=0, timeout=10):
     except Exception as err:
         raise err
     return response
+
+
+def call_protocolsio(query, timeout=15):
+    """ Get protocols.io data for a query
+        Keyword arguments:
+          query: query
+          timeout: GET timeout
+        Returns:
+          Response JSON
+    """
+    headers = {'Authorization': f"Bearer {os.environ['PROTOCOLS_API_TOKEN']}"}
+    try:
+        response = _call_url(f"{PROTOCOLSIO_BASE}{query}",
+                             headers=headers, timeout=timeout)
+        return response
+    except Exception as err:
+        raise err
 
 
 def get_pmid(doi, timeout=10):
