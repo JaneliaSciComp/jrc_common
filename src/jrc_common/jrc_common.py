@@ -4,6 +4,7 @@
         call_biorxiv
         call_crossref
         call_datacite
+        call_figshare
         call_protocolsio
         call_oa
         call_orcid
@@ -52,6 +53,7 @@ ARXIV_BASE = "https://export.arxiv.org/api/query?search_query="
 BIORXIV_BASE = "https://api.biorxiv.org/details/biorxiv/"
 CROSSREF_BASE = 'https://api.crossref.org/works/'
 DATACITE_BASE = 'https://api.datacite.org/dois/'
+FIGSHARE_BASE = 'https://api.figshare.com/v2/'
 NCBI_BASE = 'https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/' \
             + '?tool=update_dois&email=svirskasr@hhmi.org&format=json&ids='
 OA_BASE = 'https://bg.api.oa.works/report/works'
@@ -521,6 +523,21 @@ def call_datacite(doi, timeout=10):
     """
     try:
         response = _call_url(f"{DATACITE_BASE}{doi}", timeout=timeout)
+        return response
+    except Exception as err:
+        raise err
+
+
+def call_figshare(doi, timeout=10):
+    """ Get Figshare data for a DOI
+        Keyword arguments:
+          doi: DOI
+          timeout: GET timeout
+        Returns:
+          Response JSON or raised exception
+    """
+    try:
+        response = _call_url(f"{FIGSHARE_BASE}articles?doi={doi}", timeout=timeout)
         return response
     except Exception as err:
         raise err
