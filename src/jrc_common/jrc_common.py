@@ -29,8 +29,10 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
+from functools import wraps
 import getpass
 import json
+import logging
 from operator import attrgetter
 import os
 import smtplib
@@ -42,9 +44,10 @@ import requests
 import xmltodict
 try:
     import MySQLdb
-except:
+except Exception:
     pass
 
+# pylint: disable=logging-fstring-interpolation
 
 # ****************************************************************************
 # * Constants                                                                *
@@ -95,6 +98,8 @@ OA_SUFFIX = '?q=(openalx.authorships.institutions.display_name:' \
             + '%20journal:*'
 PEOPLE_BASE = 'https://hhmipeople-prod.azurewebsites.net/People/'
 PROTOCOLSIO_BASE = 'https://www.protocols.io/api/v3/'
+TIMEOUT = (requests.exceptions.ConnectTimeout, requests.exceptions.ReadTimeout,
+           requests.exceptions.Timeout)
 
 # ****************************************************************************
 # * Internal routines                                                        *
@@ -272,6 +277,61 @@ def _decode_token(token):
         return "Your JSON Web Token is expired"
     return response
 
+
+# ****************************************************************************
+# * Decorators                                                               *
+# ****************************************************************************
+def retry(max_tries=3, delay=1, exceptions=TIMEOUT):
+    """ Retry calling the decorated function using an exponential backoff.
+        Keyword arguments:
+          max_tries: Maximum number of times to try (default 3)
+          delay: Initial delay between retries in seconds (default 1)
+          exceptions: Exceptions to retry on (default RequestException)
+        Returns:
+          Response JSON or raised exception
+    """
+    def retry_decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            tries = 0
+            while tries < max_tries:
+                try:
+                    return func(*args, **kwargs)
+                except exceptions:
+                    tries += 1
+                    if tries == max_tries:
+                        raise
+                    wait_time = delay * (2 ** (tries - 1))
+                    print(f"Retrying {func.__name__} requests.get in {wait_time:.2f} seconds... "
+                          + f"(attempt {tries}/{max_tries})")
+                    time.sleep(wait_time)
+        return wrapper
+    return retry_decorator
+
+
+def wall_timer(msg=None, logger=None):
+    ''' Decorator to time the execution of a function
+        Keyword arguments:
+          msg: message to print
+        Returns:
+          wrapped function
+    '''
+    def timer_decorator(func):
+        @wraps(func)
+        def wrapperx(*args, **kwargs):
+            t = time.time()
+            res = func(*args, **kwargs)
+            elapsed_time = time.time() - t
+            hh = int(elapsed_time // 3600)
+            mm = int((elapsed_time % 3600) // 60)
+            ss = elapsed_time % 60
+            formatted_time = "{:02d}:{:02d}:{:05.2f}".format(hh, mm, ss)
+            display_msg = msg if msg else func.__name__
+            tlogger = logger if logger else logging.getLogger(__name__)
+            tlogger.info(f"{display_msg} {formatted_time}")
+            return res
+        return wrapperx
+    return timer_decorator
 
 # ****************************************************************************
 # * Configuration                                                            *
@@ -579,8 +639,8 @@ def call_orcid(oid, timeout=10):
     except Exception as err:
         raise err
 
-
-def call_people_by_id(eid, timeout=10):
+@retry(max_tries=4, delay=2)
+def call_people_by_id(eid, timeout=5):
     """ Get person data from the People system by employee ID
         Keyword arguments:
           eid: employee ID
@@ -591,16 +651,14 @@ def call_people_by_id(eid, timeout=10):
     url = f"{PEOPLE_BASE}Person/GetById/{eid}"
     headers = {'APIKey': os.environ['PEOPLE_API_KEY'],
                'Content-Type': 'application/json'}
-    try:
-        response = _call_url(url, headers=headers, timeout=timeout)
-    except Exception as err:
-        raise err
+    response = _call_url(url, headers=headers, timeout=timeout)
     if response and (('nameFirst' not in response) or (not response['nameFirst'])):
         return None
     return response
 
 
-def call_people_by_name(name, timeout=10):
+@retry(max_tries=4, delay=2)
+def call_people_by_name(name, timeout=.001):
     """ Get person data from the People system by name
         Keyword arguments:
           name: name
@@ -611,13 +669,11 @@ def call_people_by_name(name, timeout=10):
     url = f"{PEOPLE_BASE}Search/ByName/{name}"
     headers = {'APIKey': os.environ['PEOPLE_API_KEY'],
                'Content-Type': 'application/json'}
-    try:
-        response = _call_url(url, headers=headers, timeout=timeout)
-    except Exception as err:
-        raise err
+    response = _call_url(url, headers=headers, timeout=timeout)
     return response
 
 
+@retry(max_tries=4, delay=2)
 def call_people_by_suporg(code, page=0, timeout=10):
     """ Get suporg data from the People system by suporg code
         Keyword arguments:
@@ -630,10 +686,7 @@ def call_people_by_suporg(code, page=0, timeout=10):
     url = f"{PEOPLE_BASE}GetByOrg/{code}/{page}"
     headers = {'APIKey': os.environ['PEOPLE_API_KEY'],
                'Content-Type': 'application/json'}
-    try:
-        response = _call_url(url, headers=headers, timeout=timeout)
-    except Exception as err:
-        raise err
+    response = _call_url(url, headers=headers, timeout=timeout)
     return response
 
 
