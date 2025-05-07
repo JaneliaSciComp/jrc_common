@@ -658,7 +658,7 @@ def call_people_by_id(eid, timeout=5):
 
 
 @retry(max_tries=4, delay=2)
-def call_people_by_name(name, timeout=.001):
+def call_people_by_name(name, timeout=5):
     """ Get person data from the People system by name
         Keyword arguments:
           name: name
