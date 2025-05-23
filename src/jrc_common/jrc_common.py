@@ -98,8 +98,22 @@ OA_SUFFIX = '?q=(openalx.authorships.institutions.display_name:' \
             + '%20journal:*'
 PEOPLE_BASE = 'https://hhmipeople-prod.azurewebsites.net/People/'
 PROTOCOLSIO_BASE = 'https://www.protocols.io/api/v3/'
+PUBMED_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed'
 TIMEOUT = (requests.exceptions.ConnectTimeout, requests.exceptions.ReadTimeout,
            requests.exceptions.Timeout)
+
+# ****************************************************************************
+# * Custom exceptions                                                        *
+# ****************************************************************************
+class CustomError(Exception):
+    """Base class for other exceptions"""
+    pass
+
+class PMIDNotFound(CustomError):
+    """PMID not found"""
+    def __init__(self, message, details):
+        super().__init__(message)
+        self.details = details
 
 # ****************************************************************************
 # * Internal routines                                                        *
@@ -715,9 +729,38 @@ def get_pmid(doi, timeout=10):
         Returns:
           Response JSON or raised exception
     """
+    # Try getting it from PubMed Central
     url = f"{NCBI_BASE}{doi}"
     try:
         response = _call_url(url, timeout=timeout)
     except Exception as err:
         raise err
-    return response
+    if response and 'status' in response and response['status'] == 'ok' \
+            and 'pmid' in response['records'][0]:
+        return response['records'][0]['pmid']
+    # Try getting it from PubMed
+    url = f"{PUBMED_BASE}&api_key={os.environ['NCBI_API_KEY']}&term=/{doi}[DOI]"
+    try:
+        response = requests.get(url, timeout=timeout)
+    except Exception as err:
+        raise err
+    if response.status_code == 200:
+        try:
+            data = xmltodict.parse(response.text)
+        except Exception as err:
+            raise err
+        if 'eSearchResult' in data and 'Count' in data['eSearchResult'] and data['eSearchResult']['Count'] == '1':
+             if 'IdList' in data['eSearchResult'] and 'Id' in data['eSearchResult']['IdList']:
+                pmid = data['eSearchResult']['IdList']['Id']
+                return pmid if pmid.isdigit() else None
+        elif 'eSearchResult' in data and 'Count' in data['eSearchResult'] and data['eSearchResult']['Count'] == '0':
+            if 'ErrorList' in data['eSearchResult']:
+                raise PMIDNotFound(f"No PMID found for {doi}", json.dumps(data['eSearchResult']['ErrorList'], default=str))
+            elif 'WarningList' in data['eSearchResult']:
+                raise PMIDNotFound(f"No PMID found for {doi}", json.dumps(data['eSearchResult']['WarningList'], default=str))
+            else:
+                raise PMIDNotFound(f"No PMID found for {doi}", json.dumps(data, default=str))
+        else:
+            raise PMIDNotFound(f"Invalid PMID for {doi}", json.dumps(data, default=str))
+    else:
+        raise PMIDNotFound(f"Could not find PMID for {doi}", f"Status: {response.status_code}")
