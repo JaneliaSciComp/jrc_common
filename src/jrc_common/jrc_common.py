@@ -738,6 +738,8 @@ def get_pmid(doi, timeout=10):
     if response and 'status' in response and response['status'] == 'ok' \
             and 'pmid' in response['records'][0]:
         return response['records'][0]['pmid']
+    if 'NCBI_API_KEY' not in os.environ:
+        return ""
     # Try getting it from PubMed
     url = f"{PUBMED_BASE}&api_key={os.environ['NCBI_API_KEY']}&term=/{doi}[DOI]"
     try:
@@ -764,3 +766,4 @@ def get_pmid(doi, timeout=10):
             raise PMIDNotFound(f"Invalid PMID for {doi}", json.dumps(data, default=str))
     else:
         raise PMIDNotFound(f"Could not find PMID for {doi}", f"Status: {response.status_code}")
+
