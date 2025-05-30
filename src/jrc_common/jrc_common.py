@@ -778,7 +778,7 @@ def convert_pmid(pmid, convert_to = 'pmcid', timeout=10):
     """
     url = f"{NCBI_BASE}{pmid}"
     try:
-        response = requests.get(url, timeout=timeout)
+        response = requests.get(url, timeout=timeout).json()
     except Exception as err:
         raise err
     if response and 'status' in response and response['status'] == 'ok' \
