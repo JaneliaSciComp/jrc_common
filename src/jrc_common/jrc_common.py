@@ -11,6 +11,7 @@
         call_people_by_id
         call_people_by_name
         call_people_by_suporg
+        convert_pmid
         get_config
         get_pmid
         get_run_data
@@ -758,12 +759,29 @@ def get_pmid(doi, timeout=10):
         elif 'eSearchResult' in data and 'Count' in data['eSearchResult'] and data['eSearchResult']['Count'] == '0':
             if 'ErrorList' in data['eSearchResult']:
                 raise PMIDNotFound(f"No PMID found for {doi}", json.dumps(data['eSearchResult']['ErrorList'], default=str))
-            elif 'WarningList' in data['eSearchResult']:
+            if 'WarningList' in data['eSearchResult']:
                 raise PMIDNotFound(f"No PMID found for {doi}", json.dumps(data['eSearchResult']['WarningList'], default=str))
-            else:
-                raise PMIDNotFound(f"No PMID found for {doi}", json.dumps(data, default=str))
-        else:
-            raise PMIDNotFound(f"Invalid PMID for {doi}", json.dumps(data, default=str))
+            raise PMIDNotFound(f"No PMID found for {doi}", json.dumps(data, default=str))
+        raise PMIDNotFound(f"Invalid PMID for {doi}", json.dumps(data, default=str))
     else:
         raise PMIDNotFound(f"Could not find PMID for {doi}", f"Status: {response.status_code}")
 
+
+def convert_pmid(pmid, convert_to = 'pmcid', timeout=10):
+    """ Convert a PMID to PMCID or DOI
+        Keyword arguments:
+          pmid: PMID
+          convert_to: "pmcid" or "doi"
+          timeout: GET timeout
+        Returns:
+          Response JSON or raised exception
+    """
+    url = f"{NCBI_BASE}{pmid}"
+    try:
+        response = requests.get(url, timeout=timeout)
+    except Exception as err:
+        raise err
+    if response and 'status' in response and response['status'] == 'ok' \
+            and convert_to in response['records'][0]:
+        return response['records'][0][convert_to]
+    return ""
