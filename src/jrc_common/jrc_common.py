@@ -169,10 +169,14 @@ def _call_url_old(url, headers=None, timeout=10):
     raise Exception(f"Status: {str(req.status_code)} ({url})")
 
 
-def _call_url(url, headers=None, timeout=10, fmt='json'):
+def _call_url(url, headers=None, timeout=10, fmt='json', allow=[404]):
     ''' Get JSON from a URL (resumably a web API somewhere)
         Keyword arguments:
           url: URL
+          headers: headers to send with request
+          timeout: timeout (seconds)
+          fmt: format
+          allow: status codes to return an empty response for
         Returns:
           JSON response
     '''
@@ -199,7 +203,7 @@ def _call_url(url, headers=None, timeout=10, fmt='json'):
         else:
             raise Exception(f"Unknown format: {fmt}")
         return jstr
-    if req.status_code == 404:
+    if req.status_code in allow:
         return {}
     raise Exception(f"Status: {str(req.status_code)} ({url})")
 
@@ -733,7 +737,7 @@ def get_pmid(doi, timeout=10):
     # Try getting it from PubMed Central
     url = f"{NCBI_BASE}{doi}"
     try:
-        response = _call_url(url, timeout=timeout)
+        response = _call_url(url, timeout=timeout, allow=[403, 404])
     except Exception as err:
         raise err
     if response and 'status' in response and response['status'] == 'ok' \
