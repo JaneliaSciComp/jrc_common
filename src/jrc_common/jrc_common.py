@@ -217,6 +217,13 @@ def _connect_mongo(dbo):
           connector
     """
     from pymongo import MongoClient
+    if hasattr(dbo, "uri") and dbo.uri:
+        try:
+            client = MongoClient(dbo.uri)
+            connector = client[dbo.client]
+        except Exception as err:
+            raise err
+        return connector
     full_host = f"{dbo.host}:" \
                 + ({dbo.port} if hasattr(dbo, "port") and dbo.port else "27017")
     try:
@@ -737,7 +744,7 @@ def get_pmid(doi, timeout=10):
     # Try getting it from PubMed Central
     url = f"{NCBI_BASE}{doi}"
     try:
-        response = _call_url(url, timeout=timeout, allow=[403, 404])
+        response = _call_url(url, timeout=timeout, allow=[400, 403, 404])
     except Exception as err:
         raise err
     if response and 'status' in response and response['status'] == 'ok' \
