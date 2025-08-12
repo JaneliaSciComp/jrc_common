@@ -62,8 +62,9 @@ NCBI_BASE = 'https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/' \
             + '?tool=update_dois&email=svirskasr@hhmi.org&format=json&ids='
 OA_BASE = 'https://bg.api.oa.works/report/works'
 ORCID_BASE = 'https://pub.orcid.org/v3.0/'
-OA_SUFFIX = '?q=(supplements.janelia-lab-heads__hhmi:*' \
-            + '%20OR%20openalx.authorships.institutions.display_name:' \
+#OA_SUFFIX = '?q=(supplements.janelia-lab-heads__hhmi:*' \
+#            + '%20OR%20openalx.authorships.institutions.display_name:' \
+OA_SUFFIX = '?q=(openalx.authorships.institutions.display_name:' \
             + 'janelia%20OR%20openalx.authorships.affiliations.raw_affiliation_string:' \
             + 'janelia%20OR%20openalx.authorships.institutions.ror:' \
             + '013sk6x84%20OR%20openalx.authorships.institutions.id:' \
