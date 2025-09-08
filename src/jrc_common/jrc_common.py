@@ -4,6 +4,7 @@
         call_biorxiv
         call_crossref
         call_datacite
+        call_elsevier
         call_figshare
         call_protocolsio
         call_oa
@@ -57,6 +58,7 @@ ARXIV_BASE = "https://export.arxiv.org/api/query?search_query="
 BIORXIV_BASE = "https://api.biorxiv.org/details/biorxiv/"
 CROSSREF_BASE = 'https://api.crossref.org/works/'
 DATACITE_BASE = 'https://api.datacite.org/dois/'
+ELSEVIER_BASE = 'https://api.elsevier.com/content/'
 FIGSHARE_BASE = 'https://api.figshare.com/v2/'
 NCBI_BASE = 'https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/' \
             + '?tool=update_dois&email=svirskasr@hhmi.org&format=json&ids='
@@ -145,32 +147,6 @@ def _call_config_responder(endpoint):
     raise ConnectionError(f"Could not get response from {url}: {req.text}")
 
 
-def _call_url_old(url, headers=None, timeout=10):
-    ''' Get JSON from a URL (resumably a web API somewhere)
-        Keyword arguments:
-          url: URL
-        Returns:
-          JSON response
-    '''
-    try:
-        if headers:
-            req = requests.get(url, headers=headers, timeout=timeout)
-        else:
-            req = requests.get(url, timeout=timeout)
-    except requests.exceptions.RequestException as err:
-        raise err
-    if req.status_code == 200:
-        try:
-            jstr = req.json()
-        except Exception as err:
-            raise requests.exceptions.JSONDecodeError("Could not decode response from " \
-                                                      + f"{url} : {err}")
-        return jstr
-    if req.status_code == 404:
-        return {}
-    raise Exception(f"Status: {str(req.status_code)} ({url})")
-
-
 def _call_url(url, headers=None, timeout=10, fmt='json', allow=[404]):
     ''' Get JSON from a URL (resumably a web API somewhere)
         Keyword arguments:
@@ -188,7 +164,7 @@ def _call_url(url, headers=None, timeout=10, fmt='json', allow=[404]):
         else:
             req = requests.get(url, timeout=timeout)
     except requests.exceptions.RequestException as err:
-        raise err
+        raise err from err
     if req.status_code == 200:
         if fmt == 'json':
             try:
@@ -207,7 +183,9 @@ def _call_url(url, headers=None, timeout=10, fmt='json', allow=[404]):
         return jstr
     if req.status_code in allow:
         return {}
-    raise Exception(f"Status: {str(req.status_code)} ({url})")
+    raise Exception({"Status": str(req.status_code),
+                     "Error": requests.status_codes._codes[req.status_code][0],
+                     "URL": url})
 
 
 def _connect_mongo(dbo):
@@ -616,6 +594,23 @@ def call_datacite(doi, timeout=10):
         raise err
 
 
+def call_elsevier(query, timeout=15):
+    """ Get protocols.io data for a query
+        Keyword arguments:
+          query: query
+          timeout: GET timeout
+        Returns:
+          Response JSON
+    """
+    headers = {'X-ELS-APIKey': os.environ['ELSEVIER_API_KEY']}
+    try:
+        response = _call_url(f"{ELSEVIER_BASE}{query}",
+                             headers=headers, timeout=timeout)
+        return response
+    except Exception as err:
+        raise err
+
+
 def call_figshare(doi, timeout=10):
     """ Get Figshare data for a DOI
         Keyword arguments:
@@ -765,15 +760,19 @@ def get_pmid(doi, timeout=10):
             data = xmltodict.parse(response.text)
         except Exception as err:
             raise err
-        if 'eSearchResult' in data and 'Count' in data['eSearchResult'] and data['eSearchResult']['Count'] == '1':
-             if 'IdList' in data['eSearchResult'] and 'Id' in data['eSearchResult']['IdList']:
+        if 'eSearchResult' in data and 'Count' in data['eSearchResult'] \
+           and data['eSearchResult']['Count'] == '1':
+            if 'IdList' in data['eSearchResult'] and 'Id' in data['eSearchResult']['IdList']:
                 pmid = data['eSearchResult']['IdList']['Id']
                 return pmid if pmid.isdigit() else None
-        elif 'eSearchResult' in data and 'Count' in data['eSearchResult'] and data['eSearchResult']['Count'] == '0':
+        elif 'eSearchResult' in data and 'Count' in data['eSearchResult'] \
+             and data['eSearchResult']['Count'] == '0':
             if 'ErrorList' in data['eSearchResult']:
-                raise PMIDNotFound(f"No PMID found for {doi}", json.dumps(data['eSearchResult']['ErrorList'], default=str))
+                raise PMIDNotFound(f"No PMID found for {doi}",
+                                   json.dumps(data['eSearchResult']['ErrorList'], default=str))
             if 'WarningList' in data['eSearchResult']:
-                raise PMIDNotFound(f"No PMID found for {doi}", json.dumps(data['eSearchResult']['WarningList'], default=str))
+                raise PMIDNotFound(f"No PMID found for {doi}",
+                                   json.dumps(data['eSearchResult']['WarningList'], default=str))
             raise PMIDNotFound(f"No PMID found for {doi}", json.dumps(data, default=str))
         raise PMIDNotFound(f"Invalid PMID for {doi}", json.dumps(data, default=str))
     else:
