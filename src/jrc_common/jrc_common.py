@@ -208,12 +208,12 @@ def _connect_mongo(dbo):
                 + ({dbo.port} if hasattr(dbo, "port") and dbo.port else "27017")
     try:
         if hasattr(dbo, "password") and dbo.password:
+            payload = {"username": dbo.user, "password": dbo.password}
             if hasattr(dbo, "replicaset") and dbo.replicaset:
-                client = MongoClient(full_host, username=dbo.user,
-                                     password=dbo.password, replicaSet=dbo.replicaset)
-            else:
-                client = MongoClient(full_host, username=dbo.user,
-                                     password=dbo.password)
+                payload["replicaSet"] = dbo.replicaset
+            if hasattr(dbo, "authsource") and dbo.authsource:
+                payload["authSource"] = dbo.authsource
+            client = MongoClient(full_host, **payload)
             connector = client[dbo.client]
         else:
             if hasattr(dbo, "replicaset") and dbo.replicaset:
