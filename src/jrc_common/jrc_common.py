@@ -483,7 +483,7 @@ def send_email(mail_text, sender, receivers, subject, attachment=None, mime='pla
         smtpobj.sendmail(sender, receivers, message.as_string())
         smtpobj.quit()
     except smtplib.SMTPException as err:
-        raise smtplib.SMTPException("There was a error and the email was not sent:\n" + err)
+        raise smtplib.SMTPException("There was a error and the email was not sent:\n" + str(err))
     except Exception as err:
         raise err
 
