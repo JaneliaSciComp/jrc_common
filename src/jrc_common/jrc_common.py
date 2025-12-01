@@ -12,6 +12,7 @@
         call_people_by_id
         call_people_by_name
         call_people_by_suporg
+        call_zenodo
         convert_pmid
         get_config
         get_pmid
@@ -104,6 +105,7 @@ OA_SUFFIX = '?q=(openalx.authorships.institutions.display_name:' \
 PEOPLE_BASE = 'https://hhmipeople-prod.azurewebsites.net/People/'
 PROTOCOLSIO_BASE = 'https://www.protocols.io/api/v3/'
 PUBMED_BASE = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed'
+ZENODO_BASE = 'https://zenodo.org/api/'
 TIMEOUT = (requests.exceptions.ConnectTimeout, requests.exceptions.ReadTimeout,
            requests.exceptions.Timeout)
 
@@ -595,7 +597,7 @@ def call_datacite(doi, timeout=10):
 
 
 def call_elsevier(query, timeout=15):
-    """ Get protocols.io data for a query
+    """ Get Elsevier data for a query
         Keyword arguments:
           query: query
           timeout: GET timeout
@@ -724,6 +726,23 @@ def call_protocolsio(query, timeout=15):
     headers = {'Authorization': f"Bearer {os.environ['PROTOCOLS_API_TOKEN']}"}
     try:
         response = _call_url(f"{PROTOCOLSIO_BASE}{query}",
+                             headers=headers, timeout=timeout)
+        return response
+    except Exception as err:
+        raise err
+
+
+def call_zenodo(query, timeout=15):
+    """ Get Zenodo data for a query
+        Keyword arguments:
+          query: query
+          timeout: GET timeout
+        Returns:
+          Response JSON
+    """
+    headers = {'Authorization': f"Bearer {os.environ['ZENODO_API_KEY']}"}
+    try:
+        response = _call_url(f"{ZENODO_BASE}{query}",
                              headers=headers, timeout=timeout)
         return response
     except Exception as err:
