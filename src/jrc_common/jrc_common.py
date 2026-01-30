@@ -13,6 +13,7 @@
         call_people_by_name
         call_people_by_suporg
         call_zenodo
+        convert_diacritics
         convert_pmid
         get_config
         get_pmid
@@ -41,6 +42,7 @@ import os
 import smtplib
 import time
 from types import SimpleNamespace
+import unicodedata
 import colorlog
 import jwt
 import requests
@@ -747,6 +749,29 @@ def call_zenodo(query, timeout=15):
         return response
     except Exception as err:
         raise err
+
+
+def convert_diacritics(input_string):
+    """ Convert diacritics to ASCII
+        Keyword arguments:
+          input_string: input text string
+        Returns:
+          Converted text (or None if no diacritics found)
+    """
+    if not input_string:
+        return None
+    # Normalize to NFD (Normalization Form D) to decompose characters
+    # into a base character and separate combining marks
+    normalized_string = unicodedata.normalize('NFD', input_string)
+    # Check for diacritic in normalized string
+    if any(unicodedata.combining(char) for char in normalized_string):
+        # Normalize the string to NFKD form (decomposed characters)
+        nfkd_form = unicodedata.normalize('NFKD', input_string)
+        # Encode to ASCII and ignore errors (drops combining diacritics), then decode back to a string
+        only_ascii = nfkd_form.encode('ascii', 'ignore')
+        return only_ascii.decode('utf-8')
+    else:
+        return None
 
 
 def get_pmid(doi, timeout=10):
