@@ -16,3 +16,6 @@ database connection routines, install:
     - psycopg2
     - psycopg2.extras
     - pymongo==4.4.0
+
+##Testing
+pytest tests/test_jrc_common.py -v
