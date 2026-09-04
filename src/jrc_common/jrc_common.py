@@ -145,8 +145,7 @@ def _call_config_responder(endpoint):
         try:
             jstr = req.json()
         except Exception as err:
-            raise requests.exceptions.JSONDecodeError("Could not decode response from " \
-                                                      + f"{url} : {err}")
+            raise ValueError(f"Could not decode response from {url}: {err}") from err
         return jstr
     raise ConnectionError(f"Could not get response from {url}: {req.text}")
 
@@ -174,8 +173,7 @@ def _call_url(url, headers=None, timeout=10, fmt='json', allow=[404]):
             try:
                 jstr = req.json()
             except Exception as err:
-                raise requests.exceptions.JSONDecodeError("Could not decode response from " \
-                                                          + f"{url} : {err}")
+                raise ValueError(f"Could not decode response from {url}: {err}") from err
         elif fmt == 'xml':
             try:
                 jstr = xmltodict.parse(req.text)
@@ -208,8 +206,7 @@ def _connect_mongo(dbo):
         except Exception as err:
             raise err
         return connector
-    full_host = f"{dbo.host}:" \
-                + ({dbo.port} if hasattr(dbo, "port") and dbo.port else "27017")
+    full_host = f"{dbo.host}:{dbo.port if hasattr(dbo, 'port') and dbo.port else 27017}"
     try:
         if hasattr(dbo, "password") and dbo.password:
             payload = {"username": dbo.user, "password": dbo.password}
@@ -277,7 +274,6 @@ def _decode_token(token):
           decoded token JSON or string error
     '''
     try:
-        response = jwt.decode(token, options={"verify_signature": False})
         response = jwt.api_jwt.decode_complete(token, options={"verify_signature": False})
     except jwt.exceptions.DecodeError:
         return "JSON Web Token failed validation"
@@ -454,12 +450,17 @@ def send_email(mail_text, sender, receivers, subject, attachment=None, mime='pla
         Keyword arguments:
           mail_text: body of email message
           sender: sender address
-          receivers: list of recipients
+          receivers: recipient address, or list of recipient addresses
           subject: email subject
           attachment: attachment file name
         Returns:
           None
     """
+    if isinstance(receivers, str):
+        # A single address is commonly passed as a plain string. Normalise it to
+        # a list: the To: header below is built with ", ".join(), which would
+        # otherwise join the string's individual characters.
+        receivers = [receivers]
     if server:
         mail_server = server
     else:
@@ -476,11 +477,11 @@ def send_email(mail_text, sender, receivers, subject, attachment=None, mime='pla
     if attachment:
         attach_file_name = attachment
         with open(attach_file_name, 'rb') as attach_file: # open the file as binary mode
-            payload = MIMEBase('application', 'octate-stream')
+            payload = MIMEBase('application', 'octet-stream')
             payload.set_payload((attach_file).read())
         encoders.encode_base64(payload) # encode the attachment
         # Add payload header with filename
-        payload.add_header('Content-Decomposition', 'attachment', filename=attach_file_name)
+        payload.add_header('Content-Disposition', 'attachment', filename=attach_file_name)
         message.attach(payload)
     try:
         smtpobj = smtplib.SMTP(mail_server)
@@ -789,7 +790,7 @@ def get_pmid(doi, timeout=10):
     except Exception as err:
         raise err
     if response and 'status' in response and response['status'] == 'ok' \
-            and 'pmid' in response['records'][0]:
+            and response.get('records') and 'pmid' in response['records'][0]:
         return response['records'][0]['pmid']
     if 'NCBI_API_KEY' not in os.environ:
         return ""
